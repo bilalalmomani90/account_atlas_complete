@@ -1,0 +1,81 @@
+# Manual release build: signed APK + AAB (Android) and a zip (Windows).
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Optional repository variable: VERSION_CODE_BASE (integer, default 0).
+# versionCode = VERSION_CODE_BASE + run number, so it only ever grows. NEVER change the keystore
+# between releases: the same key must sign every update.
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name shown to users (e.g. 0.6.0)'
+        required: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - name: Core tests must pass before releasing
+        working-directory: packages/atlas_core
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          dart test
+      - name: Create platform folders and patch Gradle
+        working-directory: apps/atlas
+        run: |
+          flutter create --platforms=android . --project-name atlas
+          python3 ../../tools/configure_android.py
+          python3 ../../tools/configure_signing.py
+      - name: Write keystore
+        working-directory: apps/atlas/android
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KS_B64" || { echo "missing ANDROID_KEYSTORE_BASE64 secret"; exit 1; }
+          echo "$KS_B64" | base64 -d > app/upload-keystore.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' "$KS_PASS" "$KEY_PASS" "$KEY_ALIAS" > key.properties
+          echo "Signing key fingerprint (must be identical in every release):"
+          keytool -list -v -keystore app/upload-keystore.jks -storepass "$KS_PASS" -alias "$KEY_ALIAS" | grep -E "SHA-?256|SHA1"
+      - name: Build APK and AAB
+        working-directory: apps/atlas
+        env:
+          BASE: ${{ vars.VERSION_CODE_BASE }}
+        run: |
+          CODE=$(( ${BASE:-0} + ${{ github.run_number }} ))
+          echo "versionCode=$CODE versionName=${{ inputs.version_name }}"
+          flutter pub get
+          flutter build apk --release --build-name=${{ inputs.version_name }} --build-number=$CODE
+          flutter build appbundle --release --build-name=${{ inputs.version_name }} --build-number=$CODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-android-release
+          path: |
+            apps/atlas/build/app/outputs/flutter-apk/app-release.apk
+            apps/atlas/build/app/outputs/bundle/release/app-release.aab
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - working-directory: packages/atlas_core
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+      - working-directory: apps/atlas
+        run: |
+          flutter create --platforms=windows . --project-name atlas
+          flutter pub get
+          flutter build windows --release --build-name=${{ inputs.version_name }}
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath atlas-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atlas-windows-release
+          path: apps/atlas/atlas-windows.zip

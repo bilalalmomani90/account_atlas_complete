@@ -1,0 +1,24 @@
+name: atlas_core
+description: Account Atlas core - schema, encrypted DB, repositories (pure Dart).
+publish_to: none
+version: 0.1.0
+environment:
+  sdk: ^3.6.0
+dependencies:
+  drift: ^2.35.0
+  sqlite3: ^3.0.0
+  uuid: ^4.5.0
+  path: ^1.9.0
+  cryptography: ^2.7.0 # unverified version: confirm on pub.dev in CI
+dev_dependencies:
+  build_runner: ^2.4.0
+  drift_dev: ^2.35.0
+  test: ^1.25.0
+  lints: ^5.0.0
+# TODO(verify in CI): bundle SQLite3MultipleCiphers for encryption.
+# Per Drift docs: sqlite3 hook option `source: sqlite3mc`. Exact pubspec syntax
+# must be checked against https://drift.simonbinder.eu/platforms/encryption
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

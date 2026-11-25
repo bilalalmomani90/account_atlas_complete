@@ -1,0 +1,49 @@
+name: ci
+on: [push, workflow_dispatch]
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get
+        working-directory: packages/atlas_core
+      - run: dart run build_runner build --delete-conflicting-outputs
+        working-directory: packages/atlas_core
+      - run: dart analyze
+        working-directory: packages/atlas_core
+      - run: dart test
+        working-directory: packages/atlas_core
+  android:
+    needs: core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get && dart run build_runner build --delete-conflicting-outputs
+        working-directory: packages/atlas_core
+      - run: flutter create --platforms=android,windows . --project-name atlas
+        working-directory: apps/atlas
+      - run: python3 ../../tools/configure_android.py
+        working-directory: apps/atlas
+      - run: flutter pub get && flutter analyze && flutter test && flutter build apk --debug
+        working-directory: apps/atlas
+      - uses: actions/upload-artifact@v4
+        with: { name: atlas-debug-apk, path: apps/atlas/build/app/outputs/flutter-apk/app-debug.apk }
+  windows:
+    needs: core
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get; dart run build_runner build --delete-conflicting-outputs
+        working-directory: packages/atlas_core
+      - run: flutter create --platforms=android,windows . --project-name atlas
+        working-directory: apps/atlas
+      - run: flutter pub get; flutter build windows --release
+        working-directory: apps/atlas
+      - uses: actions/upload-artifact@v4
+        with: { name: atlas-windows, path: apps/atlas/build/windows/x64/runner/Release }

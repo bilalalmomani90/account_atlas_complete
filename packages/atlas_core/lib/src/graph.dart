@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'database.dart';
 import 'repositories.dart';
 
 class GNode {
@@ -93,12 +92,12 @@ extension AtlasGraphBuild on AtlasRepo {
   Future<AtlasGraph> buildGraph() async {
     final nodes = <String, GNode>{};
     void add(String type, String id, String label) => nodes['$type:$id'] = GNode(type, id, label);
-    for (final x in await (db.select(db.platforms)..where((t) => t.deletedAt.isNull())).get()) add('platform', x.id, x.name);
-    for (final x in await (db.select(db.identities)..where((t) => t.deletedAt.isNull())).get()) add('identity', x.id, x.name);
-    for (final x in await (db.select(db.emails)..where((t) => t.deletedAt.isNull())).get()) add('email', x.id, x.address);
-    for (final x in await (db.select(db.accounts)..where((t) => t.deletedAt.isNull())).get()) add('account', x.id, x.displayName);
-    for (final x in await (db.select(db.projects)..where((t) => t.deletedAt.isNull())).get()) add('project', x.id, x.name);
-    for (final x in await (db.select(db.resources)..where((t) => t.deletedAt.isNull())).get()) add('resource', x.id, x.name);
+    for (final x in await (db.select(db.platforms)..where((t) => t.deletedAt.isNull())).get()) { add('platform', x.id, x.name); }
+    for (final x in await (db.select(db.identities)..where((t) => t.deletedAt.isNull())).get()) { add('identity', x.id, x.name); }
+    for (final x in await (db.select(db.emails)..where((t) => t.deletedAt.isNull())).get()) { add('email', x.id, x.address); }
+    for (final x in await (db.select(db.accounts)..where((t) => t.deletedAt.isNull())).get()) { add('account', x.id, x.displayName); }
+    for (final x in await (db.select(db.projects)..where((t) => t.deletedAt.isNull())).get()) { add('project', x.id, x.name); }
+    for (final x in await (db.select(db.resources)..where((t) => t.deletedAt.isNull())).get()) { add('resource', x.id, x.name); }
 
     final edges = <GEdge>[];
     void edge(String ft, String f, String tt, String t, String kind) {

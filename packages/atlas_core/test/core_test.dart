@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:atlas_core/atlas_core.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:test/test.dart';
 
 void main() {

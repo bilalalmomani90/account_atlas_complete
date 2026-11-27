@@ -80,7 +80,7 @@ void main() {
     expect(accounts.length, 1);
     expect(accounts.single.id, manual);
     expect(accounts.single.externalId, '42');
-    expect((await repo.accountsForEmail((await db.select(db.emails).getSingle()).id)).length, 1);
+    expect((await repo.accountsForEmail('me@x.io')).length, 1);
     expect((await db.select(db.emails).get()).length, 1); // noreply filtered
 
     final s2 = await svc.sync(id);

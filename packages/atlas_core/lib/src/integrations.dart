@@ -485,6 +485,7 @@ class IntegrationService {
             'integration_id': integrationId,
             'connection_status': 'connected',
             'origin_ref': ref,
+            if (x.profileUrl == null && a.profileUrl != null) 'profile_url': a.profileUrl,
           }, batch: batch);
           s.adopted++;
           return x.id;

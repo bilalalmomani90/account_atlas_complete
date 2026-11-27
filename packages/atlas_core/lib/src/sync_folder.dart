@@ -133,7 +133,14 @@ class FolderSync {
           final local = Map<String, Object?>.from(localRows.first.data);
           if (_canon(local) == _canon({for (final k in local.keys) k: remote[k] ?? local[k]})) continue;
           final lu = (local['updated_at'] as int?) ?? 0, ru = (remote['updated_at'] as num?)?.toInt() ?? 0;
-          final remoteWins = ru != lu ? ru > lu : _canon(remote).compareTo(_canon(local)) > 0;
+          // Timestamps have 1 s resolution. On a tie a tombstone wins (a delete must not be lost),
+          // then a stable content comparison so every device picks the same winner.
+          final ld = local['deleted_at'] != null, rd = remote['deleted_at'] != null;
+          final remoteWins = ru != lu
+              ? ru > lu
+              : ld != rd
+                  ? rd
+                  : _canon(remote).compareTo(_canon(local)) > 0;
           final both = lu > sinceSec && ru > sinceSec;
           if (both) {
             rep.conflicts++;
